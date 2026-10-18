@@ -11,7 +11,7 @@
  */
 'use strict';
 
-const CACHE_VERSION = 'cab5283934';
+const CACHE_VERSION = 'dea466d443';
 const CACHE_PREFIX = 'vostok-';
 const CACHE = CACHE_PREFIX + CACHE_VERSION;
 const PAGE = './';
@@ -142,10 +142,12 @@ const PHOTO_PRECACHE = [
   './photos/09-doner-shaurma.webp',
   './photos/10-pizza-t.webp',
   './photos/10-pizza.webp',
-  './photos/11-chay-kofe-t.webp',
-  './photos/11-chay-kofe.webp',
+  './photos/11-chay-kofe-novoe-t.webp',
+  './photos/11-chay-kofe-novoe.webp',
   './photos/12-napitki-t.webp',
-  './photos/12-napitki.webp'
+  './photos/12-napitki.webp',
+  './photos/13-deserty-t.webp',
+  './photos/13-deserty.webp'
 ];
 const photosUrl = new URL('./photos/', self.location).href;
 
