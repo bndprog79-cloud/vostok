@@ -884,8 +884,9 @@ const priceData = {
     siteUrl: "https://bndprog79-cloud.github.io/vostok/",
     type: "food",
     delivery: {"min":3000,"fee":1000,"freeFrom":15000,"pickup":true},
+    packaging: {"price":100,"count":1,"except":{"chay-kofe":0,"napitki":0}},
     version: "1.0.0",
-    updatedAt: "2026-10-18",       // дата «Цены актуальны на»
+    updatedAt: "2026-10-19",       // дата «Цены актуальны на»
     defaultLang: "ru",            // ru | kk
     // Превью ссылки в мессенджерах (Open Graph) и картинка og-image.png — рисует сборка (tools/build.js)
     share: {
@@ -909,16 +910,17 @@ const priceData = {
     // Маршрут — временно поиск 2ГИС по адресу «Брусиловского 191А» (кириллица закодирована); попросить у кафе ссылку на карточку в 2ГИС
     mapLink: "https://2gis.kz/almaty/search/%D0%91%D1%80%D1%83%D1%81%D0%B8%D0%BB%D0%BE%D0%B2%D1%81%D0%BA%D0%BE%D0%B3%D0%BE%20191%D0%90",
     timezone: "Asia/Almaty",
-    // Режим работы: [ДЕМО] ежедневно 10:00–22:00 — уточнить у кафе
+    // Режим работы: круглосуточно — согласовано 19.10 (было [ДЕМО] 10:00–22:00). Все дни 00:00–24:00 — сборка вставляет
+    // engine/parts/all-day.js: «Открыто круглосуточно» (ui.openAllDay), в расписании «круглосуточно» (ui.allDay), без предзаказа
     hours: {
       week: {
-        mon: { open: "10:00", close: "22:00" },
-        tue: { open: "10:00", close: "22:00" },
-        wed: { open: "10:00", close: "22:00" },
-        thu: { open: "10:00", close: "22:00" },
-        fri: { open: "10:00", close: "22:00" },
-        sat: { open: "10:00", close: "22:00" },
-        sun: { open: "10:00", close: "22:00" }
+        mon: { open: "00:00", close: "24:00" },
+        tue: { open: "00:00", close: "24:00" },
+        wed: { open: "00:00", close: "24:00" },
+        thu: { open: "00:00", close: "24:00" },
+        fri: { open: "00:00", close: "24:00" },
+        sat: { open: "00:00", close: "24:00" },
+        sun: { open: "00:00", close: "24:00" }
       },
       exceptions: []
     },
@@ -942,6 +944,8 @@ const priceData = {
       searchClear: "Очистить",
       nothingFound: "Ничего не найдено",
       openUntil: "Открыто до {time}",
+      openAllDay: "Открыто круглосуточно",
+      allDay: "круглосуточно",
       closedOpensAt: "Закрыто · откроется в {time}",
       actionWhatsapp: "WhatsApp",
       actionCall: "Позвонить",
@@ -1040,6 +1044,8 @@ const priceData = {
       msgSizeNote: " (размер уточнить)",
       msgSubtotal: "Сумма: {sum}",
       msgDelivery: "Доставка: {sum}",
+      packRow: "Тара: {n} × {price}",
+      msgPack: "Тара: {n} × {price} — {sum}",
       msgTotal: "Итого: {sum}",
       msgModeDelivery: "Способ получения: доставка",
       msgModePickup: "Способ получения: самовывоз",
@@ -1054,6 +1060,8 @@ const priceData = {
       searchClear: "Тазалау",
       nothingFound: "Ештеңе табылмады",
       openUntil: "{time} дейін ашық",
+      openAllDay: "Тәулік бойы ашық",
+      allDay: "тәулік бойы",
       closedOpensAt: "Жабық · ашылуы {time}",
       actionWhatsapp: "WhatsApp",
       actionCall: "Қоңырау",
@@ -1151,6 +1159,8 @@ const priceData = {
       msgSizeNote: " (өлшемін нақтылау)",
       msgSubtotal: "Сомасы: {sum}",
       msgDelivery: "Жеткізу: {sum}",
+      packRow: "Ыдыс: {n} × {price}",
+      msgPack: "Ыдыс: {n} × {price} — {sum}",
       msgTotal: "Барлығы: {sum}",
       msgModeDelivery: "Алу тәсілі: жеткізу",
       msgModePickup: "Алу тәсілі: өзі алып кету",
@@ -2908,6 +2918,27 @@ function init() {
   });
 }
 
+// ─────────── Круглосуточно ───────────
+// Вставляет сборка (tools/build.js, место ALL_DAY), только если в company.hours все 7 дней { open: "00:00", close: "24:00" }
+// (первое — vostok). Статус — ui.openAllDay («Открыто круглосуточно») вместо «Открыто до 24:00», в расписании — ui.allDay
+// вместо «00:00–24:00». Заказы принимаются всегда (ordersOpen кафе без untilTime), предзаказа нет.
+function allDay(d) { return !!d && d.open === 0 && d.close === 1440; }
+
+const workStatusClock = workStatus;
+workStatus = function (date) {
+  const hours = salonHours();
+  if (hours && allDay(daySchedule(hours, salonToday(date)))) return { state: 'open', text: t('openAllDay') };
+  return workStatusClock(date);
+};
+
+const dayHoursClock = dayHours;
+dayHours = function (day) {
+  if (!allDay(day)) return dayHoursClock(day);
+  const box = el('span', 'dtime');
+  box.appendChild(el('span', null, t('allDay')));
+  return box;
+};
+
 // ─────────── Меню кафе: корзина и заказ в WhatsApp ───────────
 // Вставляет сборка (tools/build.js, место FOOD_JS), только если в settings.js салона type: "food". У салонов этого кода нет.
 // Подменяет несколько функций движка своими версиями: строка блюда (serviceRow), карточка блюда (renderItem),
@@ -3400,6 +3431,7 @@ function orderText(open) {
   out.push('');
   out.push(fill(t('msgSubtotal'), { sum: formatAmount(tot.subtotal) }));
   if (order.mode === 'delivery') out.push(fill(t('msgDelivery'), { sum: tot.fee ? formatAmount(tot.fee) : t('free') }));
+  if (tot.pack) out.push(fill(t('msgPack'), { n: tot.packCount, price: formatAmount(PACK.price), sum: formatAmount(tot.pack) })); // тара
   out.push(fill(t('msgTotal'), { sum: formatAmount(tot.total) }));
   out.push(t(order.mode === 'pickup' ? 'msgModePickup' : 'msgModeDelivery'));
   if (order.mode === 'delivery' && order.address.trim()) out.push(fill(t('msgAddress'), { text: order.address.trim() }));
@@ -3502,6 +3534,7 @@ function checkout(screen) {
     sum.textContent = '';
     sumRow(t('subtotal'), formatAmount(tot.subtotal));
     if (delivery) sumRow(t('deliveryFee'), tot.fee ? formatAmount(tot.fee) : t('free'));
+    if (tot.pack) sumRow(fill(t('packRow'), { n: tot.packCount, price: formatAmount(PACK.price) }), formatAmount(tot.pack)); // тара
     sumRow(t('total'), formatAmount(tot.total), 'ftotal');
     toFree.textContent = delivery && tot.fee && DELIVERY.freeFrom ? fill(t('toFree'), { sum: formatAmount(DELIVERY.freeFrom - tot.subtotal) }) : '';
     toFree.hidden = !toFree.textContent;
@@ -3701,6 +3734,35 @@ renderCategory = function (screen, cat) {
   const start = Math.min(galleryPos[cat.id] || 0, slides.length - 1);
   if (start) track.scrollLeft = start * track.clientWidth;
   show();
+};
+
+// ─────────── Тара ───────────
+// Вставляет сборка (место PACKAGING в food.js), только если в settings.js кафе packaging: { price, count, except } (первое — vostok).
+// price — цена одной тары; count — тары на одну штуку блюда; except — исключения: "раздел", "раздел/блюдо" или
+// "раздел/блюдо/вариант" → число тары (например, напитки — 0). Тара входит в «Итого» (строка в корзине — место PACKAGING_ROW,
+// в сообщении WhatsApp перед «Итого» — PACKAGING_MSG), но не в «Сумму»: минимальная сумма и бесплатная доставка — по блюдам.
+const PACK = priceData.meta.packaging;
+
+// Тары на одну штуку строки корзины: самое точное из except, иначе count
+function packPer(r) {
+  const ex = PACK.except || {};
+  const keys = [r.cat.id + '/' + r.item.id, r.cat.id];
+  if (r.variant) keys.unshift(r.cat.id + '/' + r.item.id + '/' + r.variant.id);
+  for (let k = 0; k < keys.length; k++) {
+    if (Object.prototype.hasOwnProperty.call(ex, keys[k])) return ex[keys[k]];
+  }
+  return PACK.count;
+}
+
+const cartTotalsPack = cartTotals;
+cartTotals = function (mode) {
+  const tot = cartTotalsPack(mode);
+  let n = 0;
+  cartLines().forEach(function (x) { n += packPer(x.r) * x.l.q; });
+  tot.packCount = n;
+  tot.pack = n * PACK.price;
+  tot.total += tot.pack;
+  return tot;
 };
 
 init();

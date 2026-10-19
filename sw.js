@@ -11,7 +11,7 @@
  */
 'use strict';
 
-const CACHE_VERSION = 'dea466d443';
+const CACHE_VERSION = '1f37081924';
 const CACHE_PREFIX = 'vostok-';
 const CACHE = CACHE_PREFIX + CACHE_VERSION;
 const PAGE = './';
